@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://H:/graph label/.idea/graph label.iml" filepath="H:/graph label/.idea/graph label.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/pythonProject.iml" filepath="$PROJECT_DIR$/.idea/pythonProject.iml" />
+      <module fileurl="file://H:/scripttofix/.idea/scripttofix.iml" filepath="H:/scripttofix/.idea/scripttofix.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../speechRecog/.idea/speechRecog.iml" filepath="$PROJECT_DIR$/../../speechRecog/.idea/speechRecog.iml" />
+    </modules>
+  </component>
+</project>
