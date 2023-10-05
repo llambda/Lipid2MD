@@ -570,6 +570,7 @@ def Data_to_forcefield2(df, number_lipids, force_field, merge_lipids, membrane_n
         df['class'].replace('HexCer', 'Cer', inplace=True)
         df['class'].replace('diHexCer', 'Cer', inplace=True)
 
+    #check
     data_unique = df.copy()
     data_unique_outer = pd.merge(data_unique, membrane_layer_df, on='class', how='left')
     data_unique_outer['outer layer'] = data_unique_outer['outer layer'].fillna(0)
