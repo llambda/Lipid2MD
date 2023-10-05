@@ -556,6 +556,11 @@ def Data_to_forcefield2(df, number_lipids, force_field, merge_lipids, membrane_n
     membrane_dict: dictionary
                 Dictionary containing membrane definitions
  """
+    # grab membrane configuration
+    membrane_layer_df = membrane_dict[membrane_name][1]
+    if membrane_layer_df['inner layer'].isnull().all():
+        membrane_layer_df['inner layer'] = membrane_layer_df['outer layer']
+
     df_copy = df.copy()
 
     # If user chose to avoid PCO- and PEO- lipids
@@ -565,41 +570,53 @@ def Data_to_forcefield2(df, number_lipids, force_field, merge_lipids, membrane_n
         df['class'].replace('HexCer', 'Cer', inplace=True)
         df['class'].replace('diHexCer', 'Cer', inplace=True)
 
-        ################################################################################
-        ################################################################################
-        ################################################################################
-    membrane_layer_df = membrane_dict[membrane_name][1]
-    if membrane_layer_df['inner layer'].isnull().all():
-        membrane_layer_df['inner layer'] = membrane_layer_df['outer layer']
+    data_unique = df.copy()
+    data_unique_outer = pd.merge(data_unique, membrane_layer_df, on='class', how='left')
+    data_unique_outer['outer layer'] = data_unique_outer['outer layer'].fillna(0)
+    data_unique_outer['concentration'] = data_unique_outer['concentration'] * (
+                pd.to_numeric(data_unique_outer['outer layer']) / 100)
 
-    df_copy = pd.merge(df_copy, membrane_layer_df, how='inner', on='class')
+    data_unique_inner = pd.merge(data_unique, membrane_layer_df, on='class', how='left')
+    data_unique_inner['inner layer'] = data_unique_inner['inner layer'].fillna(0)
+    data_unique_inner['concentration'] = data_unique_inner['concentration'] * (
+                pd.to_numeric(data_unique_inner['inner layer']) / 100)
 
-    df_copy['outer concentration'] = df_copy['concentration'] * (
-                pd.to_numeric(df_copy['outer layer']) / 100)
-    df_copy['inner concentration'] = df_copy['concentration'] * (
-                pd.to_numeric(df_copy['inner layer']) / 100)
-
-    data_unique_outer = df_copy.copy()
-    data_unique_inner = df_copy.copy()
-
-    data_unique_outer['concentration'] = data_unique_outer['outer concentration']
-    data_unique_inner['concentration'] = data_unique_inner['inner concentration']
-
-    data_unique_outer = data_unique_outer.iloc[:, :-4]
-    data_unique_inner = data_unique_inner.iloc[:, :-4]
+    data_unique_outer = data_unique.drop_duplicates(subset=["class", "Species"])
+    data_unique_inner = data_unique.drop_duplicates(subset=["class", "Species"])
 
 
-    # Temporarily drop duplicates to calculate relative abundances
-    data_unique_outer = data_unique_outer.drop_duplicates(subset=["class", "Species"])
-    data_unique_inner = data_unique_inner.drop_duplicates(subset=["class", "Species"])
 
-    outer_layer_df = Data_to_forcefield2_helper(data_unique_outer, df_copy.iloc[:,:-4])
-    inner_layer_df = Data_to_forcefield2_helper(data_unique_inner, df_copy.iloc[:,:-4])
+    outer_layer_df = Data_to_forcefield2_helper(data_unique_outer, df_copy)
+    inner_layer_df = Data_to_forcefield2_helper(data_unique_inner, df_copy)
 
-    outer_layer_df['layer'] = 'outer'
-    inner_layer_df['layer'] = 'inner'
+    # df_copy = pd.merge(df_copy, membrane_layer_df, how='inner', on='class')
+    #
+    # df_copy['outer concentration'] = df_copy['concentration'] * (
+    #             pd.to_numeric(df_copy['outer layer']) / 100)
+    # df_copy['inner concentration'] = df_copy['concentration'] * (
+    #             pd.to_numeric(df_copy['inner layer']) / 100)
+    #
+    # data_unique_outer = df_copy.copy()
+    # data_unique_inner = df_copy.copy()
+    #
+    # data_unique_outer['concentration'] = data_unique_outer['outer concentration']
+    # data_unique_inner['concentration'] = data_unique_inner['inner concentration']
+    #
+    # data_unique_outer = data_unique_outer.iloc[:, :-4]
+    # data_unique_inner = data_unique_inner.iloc[:, :-4]
+    #
+    #
+    # # Temporarily drop duplicates to calculate relative abundances
+    # data_unique_outer = data_unique_outer.drop_duplicates(subset=["class", "Species"])
+    # data_unique_inner = data_unique_inner.drop_duplicates(subset=["class", "Species"])
+    #
+    # outer_layer_df = Data_to_forcefield2_helper(data_unique_outer, df_copy.iloc[:,:-4])
+    # inner_layer_df = Data_to_forcefield2_helper(data_unique_inner, df_copy.iloc[:,:-4])
+    #
+    # outer_layer_df['layer'] = 'outer'
+    # inner_layer_df['layer'] = 'inner'
 
-    total_layer_df = pd.concat([outer_layer_df, inner_layer_df])
+    # total_layer_df = pd.concat([outer_layer_df, inner_layer_df])
     return total_layer_df
 
 def Data_to_forcefield2_helper(data_unique, df_copy):
