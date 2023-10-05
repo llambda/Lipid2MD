@@ -528,8 +528,9 @@ def Data_to_membrane_layers(configuration_file):
         else:
             if chunk != []:
                 chunk = pd.concat(chunk, axis=1).T
-                membrane_name = chunk.iloc[0][0]
-                membrane_data = chunk.iloc[1:,-3:].dropna(how='all', inplace=True, axis=0)
+                membrane_name = chunk.iloc[0][5]
+                membrane_data = chunk.iloc[1:,-3:].dropna(how='all', axis=0)
+                membrane_data.columns = ['class', 'outer layer', 'inner layer']
                 membrane_dict[membrane_name] = [chunk.iloc[1:,:-3], membrane_data]
 
             chunk = []
@@ -564,9 +565,44 @@ def Data_to_forcefield2(df, number_lipids, force_field, merge_lipids, membrane_n
         df['class'].replace('HexCer', 'Cer', inplace=True)
         df['class'].replace('diHexCer', 'Cer', inplace=True)
 
+        ################################################################################
+        ################################################################################
+        ################################################################################
+    membrane_layer_df = membrane_dict[membrane_name][1]
+    if membrane_layer_df['inner layer'].isnull().all():
+        membrane_layer_df['inner layer'] = membrane_layer_df['outer layer']
+
+    df_copy = pd.merge(df_copy, membrane_layer_df, how='inner', on='class')
+
+    df_copy['outer concentration'] = df_copy['concentration'] * (
+                pd.to_numeric(df_copy['outer layer']) / 100)
+    df_copy['inner concentration'] = df_copy['concentration'] * (
+                pd.to_numeric(df_copy['inner layer']) / 100)
+
+    data_unique_outer = df_copy.copy()
+    data_unique_inner = df_copy.copy()
+
+    data_unique_outer['concentration'] = data_unique_outer['outer concentration']
+    data_unique_inner['concentration'] = data_unique_inner['inner concentration']
+
+    data_unique_outer = data_unique_outer.iloc[:, :-4]
+    data_unique_inner = data_unique_inner.iloc[:, :-4]
+
+
     # Temporarily drop duplicates to calculate relative abundances
-    data_unique = df.copy()
-    data_unique = data_unique.drop_duplicates(subset=["class", "Species"])
+    data_unique_outer = data_unique_outer.drop_duplicates(subset=["class", "Species"])
+    data_unique_inner = data_unique_inner.drop_duplicates(subset=["class", "Species"])
+
+    outer_layer_df = Data_to_forcefield2_helper(data_unique_outer, df_copy.iloc[:,:-4])
+    inner_layer_df = Data_to_forcefield2_helper(data_unique_inner, df_copy.iloc[:,:-4])
+
+    outer_layer_df['layer'] = 'outer'
+    inner_layer_df['layer'] = 'inner'
+
+    total_layer_df = pd.concat([outer_layer_df, inner_layer_df])
+    return total_layer_df
+
+def Data_to_forcefield2_helper(data_unique, df_copy):
 
     # Calculate relative abundance (%)
     data_unique['relative abundance %'] = data_unique['concentration'] * 100 / data_unique['concentration'].sum()
@@ -625,7 +661,6 @@ def Data_to_forcefield2(df, number_lipids, force_field, merge_lipids, membrane_n
     final_df_grouped = final_df_grouped.rename(columns={"Species": "most common lipid"})
 
     return final_df_grouped
-
 
 if __name__ == '__main__':
 
@@ -794,7 +829,7 @@ if __name__ == '__main__':
                        force_field)
 
     ###########################################################################
-    ###     DIVIDE UPPER AND LOWER MEMBRANE
+    ###     get membrane data
     ###########################################################################
     membrane_dict = Data_to_membrane_layers(configuration_file)
 
